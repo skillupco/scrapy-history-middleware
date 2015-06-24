@@ -29,7 +29,7 @@ class HistoryMiddleware(object):
         self.store_if = load_object(history.get(
             'STORE_IF', 'history.logic.StoreAlways'))(settings)
         self.storage = load_object(history.get(
-            'BACKEND', 'history.storage.S3CacheStorage'))(settings)
+            'BACKEND', 'history.storage.S3CacheStorage'))(self.stats, settings)
         self.ignore_missing = settings.getbool('HTTPCACHE_IGNORE_MISSING')
 
         dispatcher.connect(self.spider_opened, signal=signals.spider_opened)

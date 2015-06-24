@@ -11,7 +11,7 @@ packages = [
 ]
 
 requires = [
-    'scrapy>=0.12,<=0.12.99',
+    'scrapy',
     'boto',
     'parsedatetime',
 ]

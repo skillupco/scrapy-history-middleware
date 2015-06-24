@@ -1,18 +1,18 @@
 from datetime import datetime
 import boto
 import pickle
+import json
+import urllib
 
 from scrapy import log
 from scrapy.conf import settings
 from scrapy.utils.request import request_fingerprint
 from scrapy.responsetypes import responsetypes
 
-
 class S3CacheStorage(object):
 
-    def __init__(self, settings=settings):
+    def __init__(self, stats, settings=settings):
         history = settings.get('HISTORY')
-
         # Required settings
         self.S3_ACCESS_KEY   = history['S3_ACCESS_KEY']
         self.S3_SECRET_KEY   = history['S3_SECRET_KEY']
@@ -20,13 +20,16 @@ class S3CacheStorage(object):
 
         # Optional settings
         self.use_proxy = history.get('USE_PROXY', True)
+        self.SAVE_SOURCE = history['SAVE_SOURCE']
+        self.stats = stats
+
 
     def _get_key(self, spider, request):
         key = request_fingerprint(request)
-        return '%s/%s' % (spider.name, key)
+        return '%s/cache/%s' % (spider.name, key)
 
     def open_spider(self, spider):
-        self.s3_connection = boto.connect_s3(self.S3_ACCESS_KEY, self.S3_SECRET_KEY)
+        self.s3_connection = boto.connect_s3(self.S3_ACCESS_KEY, self.S3_SECRET_KEY, is_secure=False)
         self.s3_connection.use_proxy = self.use_proxy
         self.s3_bucket = self.s3_connection.get_bucket(self.S3_CACHE_BUCKET, validate=False)
         #self.versioning = self.s3_bucket.get_versioning_status() #=> {} or {'Versioning': 'Enabled'}
@@ -100,7 +103,7 @@ class S3CacheStorage(object):
         finally:
             s3_key.close()
 
-        data = pickle.loads(data_string)
+        data = json.loads(data_string)
 
         metadata         = data['metadata']
         request_headers  = data['request_headers']
@@ -136,7 +139,7 @@ class S3CacheStorage(object):
             'response_headers': response.headers,
             'response_body'   : response.body
         }
-        data_string = pickle.dumps(data, 2)
+        data_string = json.dumps(data)
 
         # With versioning enabled creating a new s3_key is not
         # necessary. We could just write over an old s3_key. However,
@@ -149,6 +152,13 @@ class S3CacheStorage(object):
             for k, v in metadata.items():
                 s3_key.set_metadata(k, unicode(v))
             s3_key.set_contents_from_string(data_string)
+
+            #save source file
+            if self.SAVE_SOURCE:
+                job_folder = self.SAVE_SOURCE % self._get_uri_params(spider)
+                source_name = "{}/source/{}__{}".format(job_folder, request_fingerprint(request), urllib.quote_plus(request.url))
+                source_key = self.s3_bucket.new_key(source_name)
+                source_key.set_contents_from_string(response.body)
         except boto.exception.S3ResponseError as e:
             # http://docs.pythonboto.org/en/latest/ref/boto.html#module-boto.exception
             #   S3CopyError        : Error copying a key on S3.
@@ -163,3 +173,12 @@ class S3CacheStorage(object):
             raise e
         finally:
             s3_key.close()
+
+    #from https://github.com/scrapy/scrapy/blob/342cb622f1ea93268477da557099010bbd72529a/scrapy/extensions/feedexport.py
+    def _get_uri_params(self, spider):
+        params = {}
+        for k in dir(spider):
+            params[k] = getattr(spider, k)
+        ts = self.stats.get_value('start_time').replace(microsecond=0).isoformat().replace(':', '-')
+        params['time'] = ts
+        return params

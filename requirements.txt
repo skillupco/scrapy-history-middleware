@@ -1,5 +1,5 @@
 # Project
-scrapy<=0.12.99
+scrapy
 parsedatetime
 boto
 
