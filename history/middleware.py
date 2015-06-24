@@ -22,14 +22,14 @@ class HistoryMiddleware(object):
         #   == False: don't retrieve historical data
         #   == True : retrieve most recent version
         #   == datetime(): retrieve next version after datetime()
-        self.epoch = self.parse_epoch(settings.get('EPOCH', False))
+        self.epoch = self.parse_epoch(settings.get('HISTORY_EPOCH', False))
 
-        self.retrieve_if = load_object(history.get(
-            'RETRIEVE_IF', 'history.logic.RetrieveNever'))(settings)
-        self.store_if = load_object(history.get(
-            'STORE_IF', 'history.logic.StoreAlways'))(settings)
-        self.storage = load_object(history.get(
-            'BACKEND', 'history.storage.S3CacheStorage'))(self.stats, settings)
+        self.retrieve_if = load_object(settings.get(
+            'HISTORY_RETRIEVE_IF', 'history.logic.RetrieveNever'))(settings)
+        self.store_if = load_object(settings.get(
+            'HISTORY_STORE_IF', 'history.logic.StoreAlways'))(settings)
+        self.storage = load_object(settings.get(
+            'HISTORY_BACKEND', 'history.storage.S3CacheStorage'))(self.stats, settings)
         self.ignore_missing = settings.getbool('HTTPCACHE_IGNORE_MISSING')
 
         dispatcher.connect(self.spider_opened, signal=signals.spider_opened)

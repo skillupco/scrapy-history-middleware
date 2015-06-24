@@ -12,15 +12,14 @@ from scrapy.responsetypes import responsetypes
 class S3CacheStorage(object):
 
     def __init__(self, stats, settings=settings):
-        history = settings.get('HISTORY')
         # Required settings
-        self.S3_ACCESS_KEY   = history['S3_ACCESS_KEY']
-        self.S3_SECRET_KEY   = history['S3_SECRET_KEY']
-        self.S3_CACHE_BUCKET = history['S3_BUCKET']
+        self.S3_ACCESS_KEY   = settings.get('AWS_ACCESS_KEY_ID')
+        self.S3_SECRET_KEY   = settings.get('AWS_SECRET_ACCESS_KEY')
+        self.S3_CACHE_BUCKET = settings.get('HISTORY_S3_BUCKET')
 
         # Optional settings
-        self.use_proxy = history.get('USE_PROXY', True)
-        self.SAVE_SOURCE = history['SAVE_SOURCE']
+        self.use_proxy = settings.get('HISTORY_USE_PROXY', True)
+        self.SAVE_SOURCE = settings.get('HISTORY_SAVE_SOURCE')
         self.stats = stats
 
 
