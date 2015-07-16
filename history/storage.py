@@ -18,7 +18,7 @@ class S3CacheStorage(object):
         self.S3_CACHE_BUCKET = settings.get('HISTORY_S3_BUCKET')
 
         # Optional settings
-        self.use_proxy = settings.get('HISTORY_USE_PROXY', True)
+        self.use_proxy = settings.getbool('HISTORY_USE_PROXY', True)
         self.SAVE_SOURCE = settings.get('HISTORY_SAVE_SOURCE')
         self.stats = stats
 
