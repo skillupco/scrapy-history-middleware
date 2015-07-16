@@ -30,6 +30,10 @@ class S3CacheStorage(object):
     def open_spider(self, spider):
         self.s3_connection = boto.connect_s3(self.S3_ACCESS_KEY, self.S3_SECRET_KEY, is_secure=False)
         self.s3_connection.use_proxy = self.use_proxy
+        #use spider fields to replace var in bucket string
+        if self.S3_CACHE_BUCKET:
+            self.S3_CACHE_BUCKET = self.S3_CACHE_BUCKET % self._get_uri_params(spider)
+
         self.s3_bucket = self.s3_connection.get_bucket(self.S3_CACHE_BUCKET, validate=False)
         #self.versioning = self.s3_bucket.get_versioning_status() #=> {} or {'Versioning': 'Enabled'}
 
