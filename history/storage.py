@@ -142,7 +142,7 @@ class S3CacheStorage(object):
             'response_headers': response.headers,
             'response_body'   : response.body
         }
-        data_string = json.dumps(data)
+        data_string = json.dumps(data, ensure_ascii=False, encoding='utf-8')
 
         # With versioning enabled creating a new s3_key is not
         # necessary. We could just write over an old s3_key. However,
