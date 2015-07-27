@@ -11,6 +11,7 @@ from scrapy import log
 from scrapy.conf import settings
 from scrapy.utils.request import request_fingerprint
 from scrapy.responsetypes import responsetypes
+from scrapy.http import TextResponse
 
 
 logger = logging.getLogger(__name__)
@@ -122,7 +123,7 @@ class S3CacheStorage(object):
 
         url      = metadata['response_url']
         status   = metadata.get('status')
-        Response = responsetypes.from_args(headers=response_headers, url=url)
+        Response = responsetypes.from_args(headers=response_headers, url=url, body=response_body)
         return Response(url=url, headers=response_headers, status=status, body=response_body)
 
     def store_response(self, spider, request, response):
@@ -133,7 +134,14 @@ class S3CacheStorage(object):
         key = self._get_key(spider, request)
 
         logger.info('S3Storage: path %s' % key)
-        logger.debug('S3Storage: encoding {} '.format(response.encoding))
+        logger.debug('S3Storage: response type {} '.format(type(response)))
+        if isinstance(response, TextResponse):
+            logger.debug('S3Storage: encoding {} '.format(response.encoding))
+        else:
+            logger.debug('S3Storage: responsetypes {}'.format(responsetypes.from_args(headers=response.headers, url=response.url, body=response.body)))
+        logger.debug('S3Storage: request header {}'.format(request.headers))
+        logger.debug('S3Storage: response header {}'.format(response.headers))
+
         metadata = {
             'url': request.url,
             'method': request.method,
@@ -147,7 +155,7 @@ class S3CacheStorage(object):
             'request_headers' : request.headers,
             'request_body'    : request.body,
             'response_headers': response.headers,
-            'response_body'   : response.body
+            'response_body'   : response.body.decode(response.encoding) if isinstance(response, TextResponse) else response.body
         }
         data_string = json.dumps(data, ensure_ascii=False, encoding='utf-8')
 
