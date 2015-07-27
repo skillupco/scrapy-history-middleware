@@ -176,7 +176,9 @@ class S3CacheStorage(object):
             #save source file
             if self.SAVE_SOURCE:
                 job_folder = self.SAVE_SOURCE % self._get_uri_params(spider)
-                source_name = "{}/source/{}__{}".format(job_folder, request_fingerprint(request), urllib.quote_plus(request.url))
+                source_url = request.url[:400] + '...' if len(request.url) > 400 else request.url
+
+                source_name = "{}/source/{}__{}".format(job_folder, request_fingerprint(request), urllib.quote_plus(source_url))
                 source_key = self.s3_bucket.new_key(source_name)
                 source_key.set_contents_from_string(response.body)
         except boto.exception.S3ResponseError as e:
