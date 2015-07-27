@@ -1,4 +1,7 @@
+from __future__ import unicode_literals
+
 from datetime import datetime
+import logging
 import boto
 import pickle
 import json
@@ -8,6 +11,9 @@ from scrapy import log
 from scrapy.conf import settings
 from scrapy.utils.request import request_fingerprint
 from scrapy.responsetypes import responsetypes
+
+
+logger = logging.getLogger(__name__)
 
 class S3CacheStorage(object):
 
@@ -97,7 +103,7 @@ class S3CacheStorage(object):
         if not s3_key:
             return
 
-        log.msg('S3Storage (epoch => %s): retrieving response for %s.' % (epoch, request.url))
+        logger.info('S3Storage (epoch => %s): retrieving response for %s.' % (epoch, request.url))
         try:
             data_string = s3_key.get_contents_as_string()
         except boto.exception.S3ResponseError as e:
@@ -123,10 +129,10 @@ class S3CacheStorage(object):
         """
         Store the given response in the cache.
         """
-        log.msg('S3Storage: storing response for %s.' % request.url)
+        logger.info('S3Storage: storing response for %s.' % request.url)
         key = self._get_key(spider, request)
 
-        log.msg('path: %s' % key)
+        logger.info('S3Storage: path %s' % key)
         metadata = {
             'url': request.url,
             'method': request.method,
@@ -153,6 +159,8 @@ class S3CacheStorage(object):
         try:
             #s3_key.update_metadata(metadata) #=> can't use this as need to cast to unicode
             for k, v in metadata.items():
+                if isinstance(v, str):
+                    v = v[:400] + '...' if len(v) > 400 else v
                 s3_key.set_metadata(k, unicode(v))
             s3_key.set_contents_from_string(data_string)
 
