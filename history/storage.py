@@ -133,6 +133,7 @@ class S3CacheStorage(object):
         key = self._get_key(spider, request)
 
         logger.info('S3Storage: path %s' % key)
+        logger.debug('S3Storage: encoding {} '.format(response.encoding))
         metadata = {
             'url': request.url,
             'method': request.method,
