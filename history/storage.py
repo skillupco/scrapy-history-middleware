@@ -194,6 +194,7 @@ class S3CacheStorage(object):
             #    log.msg('S3Storage: %s %s - %s' % (e.status, e.reason, e.body), log.ERROR)
             raise e
         finally:
+            source_key.close()
             s3_key.close()
 
     #from https://github.com/scrapy/scrapy/blob/342cb622f1ea93268477da557099010bbd72529a/scrapy/extensions/feedexport.py
