@@ -176,7 +176,8 @@ class S3CacheStorage(object):
             #save source file
             if self.SAVE_SOURCE:
                 job_folder = self.SAVE_SOURCE % self._get_uri_params(spider)
-                source_url = request.url[:400] + '...' if len(request.url) > 400 else request.url
+                # if the S3 key is too long, the AWS interface does not allow to download the file !
+                source_url = request.url[:200] + '...' if len(request.url) > 200 else request.url
 
                 source_name = "{}/source/{}__{}".format(job_folder, request_fingerprint(request), urllib.quote_plus(source_url))
                 source_key = self.s3_bucket.new_key(source_name)
