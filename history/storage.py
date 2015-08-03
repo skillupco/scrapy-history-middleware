@@ -159,6 +159,9 @@ class S3CacheStorage(object):
         }
         data_string = json.dumps(data, ensure_ascii=False, encoding='utf-8')
 
+        # sometimes can cause memory error in SH if too big
+        logger.debug('S3Storage: request/response json object size  {}kB'.format(len(data_string) / 1024))
+
         # With versioning enabled creating a new s3_key is not
         # necessary. We could just write over an old s3_key. However,
         # the cost to GET the old s3_key is higher than the cost to
@@ -182,6 +185,8 @@ class S3CacheStorage(object):
                 source_name = "{}/source/{}__{}".format(job_folder, request_fingerprint(request), urllib.quote_plus(source_url))
                 source_key = self.s3_bucket.new_key(source_name)
                 source_key.set_contents_from_string(response.body)
+                # sometimes can cause memory error in SH if too big
+                logger.debug('S3Storage: body size  {}kB'.format(len(response.body) / 1024))
         except boto.exception.S3ResponseError as e:
             # http://docs.pythonboto.org/en/latest/ref/boto.html#module-boto.exception
             #   S3CopyError        : Error copying a key on S3.
