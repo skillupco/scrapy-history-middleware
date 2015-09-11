@@ -123,13 +123,16 @@ class S3CacheStorage(object):
         response_body    = data['response_body']
 
         if 'binary' in data and data['binary'] == True:
+            logger.debug('S3Storage: retrieved binary body')
             response_body = base64.decode(response_body)
 
         url      = metadata['response_url']
         status   = metadata.get('status')
 
-        # bug in scrapy 1.0
+        logger.debug('S3Storage: response headers {} '.format(response_headers))
         Response = responsetypes.from_args(headers=response_headers, url=url, body=response_body)
+        logger.debug('S3Storage: response type {} '.format(Response))
+
         return Response(url=url, headers=response_headers, status=status, body=response_body)
 
     def store_response(self, spider, request, response):
@@ -150,8 +153,7 @@ class S3CacheStorage(object):
             # Binary response (excel, pdf, etc.)
             binary = True
             response_body = base64.b64encode(response.body)
-            logger.debug('S3Storage: body type {} '.format(type(response._body)))
-            logger.debug('S3Storage: responsetypes {}'.format(responsetypes.from_args(headers=response.headers, url=response.url, body=response.body)))
+            logger.debug('S3Storage: body type {} '.format(type(response_body)))
         logger.debug('S3Storage: request header {}'.format(request.headers))
         logger.debug('S3Storage: response header {}'.format(response.headers))
 
