@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 from datetime import datetime
 import logging
 import boto
-import pickle
+import base64
 import json
 import urllib
 
@@ -100,6 +100,7 @@ class S3CacheStorage(object):
 
         epoch = request.meta.get('epoch') # guaranteed to be True or datetime
         s3_key = self._get_s3_key(key, epoch)
+        logger.debug('S3Storage retrieving response for key %s.' % (s3_key))
 
         if not s3_key:
             return
@@ -121,6 +122,9 @@ class S3CacheStorage(object):
         response_headers = data['response_headers']
         response_body    = data['response_body']
 
+        if 'binary' in data and data['binary'] == True:
+            response_body = base64.decode(response_body)
+
         url      = metadata['response_url']
         status   = metadata.get('status')
         Response = responsetypes.from_args(headers=response_headers, url=url, body=response_body)
@@ -136,8 +140,15 @@ class S3CacheStorage(object):
         logger.info('S3Storage: path %s' % key)
         logger.debug('S3Storage: response type {} '.format(type(response)))
         if isinstance(response, TextResponse):
+            # Textual response (HTMl, XML, csv, etc.), decoded to unicode using encoding (from Content-Type)
+            binary = False
+            response_body = response.body.decode(response.encoding)
             logger.debug('S3Storage: encoding {} '.format(response.encoding))
         else:
+            # Binary response (excel, pdf, etc.)
+            binary = True
+            response_body = base64.b64encode(response.body)
+            logger.debug('S3Storage: body type {} '.format(type(response._body)))
             logger.debug('S3Storage: responsetypes {}'.format(responsetypes.from_args(headers=response.headers, url=response.url, body=response.body)))
         logger.debug('S3Storage: request header {}'.format(request.headers))
         logger.debug('S3Storage: response header {}'.format(response.headers))
@@ -151,13 +162,16 @@ class S3CacheStorage(object):
         }
 
         data = {
+            'binary': binary,
             'metadata'        : metadata,
             'request_headers' : request.headers,
             'request_body'    : request.body,
             'response_headers': response.headers,
-            'response_body'   : response.body.decode(response.encoding) if isinstance(response, TextResponse) else response.body
+            'response_body'   : response_body
         }
+
         data_string = json.dumps(data, ensure_ascii=False, encoding='utf-8')
+
 
         # sometimes can cause memory error in SH if too big
         logger.debug('S3Storage: request/response json object size  {} kB'.format(len(data_string) / 1024))
