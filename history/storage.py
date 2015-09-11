@@ -11,7 +11,7 @@ from scrapy import log
 from scrapy.conf import settings
 from scrapy.utils.request import request_fingerprint
 from scrapy.responsetypes import responsetypes
-from scrapy.http import TextResponse
+from scrapy.http import TextResponse, Headers
 
 
 logger = logging.getLogger(__name__)
@@ -117,9 +117,9 @@ class S3CacheStorage(object):
         data = json.loads(data_string)
 
         metadata         = data['metadata']
-        request_headers  = data['request_headers']
+        request_headers  = Headers(data['request_headers'])
         request_body     = data['request_body']
-        response_headers = data['response_headers']
+        response_headers = Headers(data['response_headers'])
         response_body    = data['response_body']
 
         if 'binary' in data and data['binary'] == True:
@@ -127,6 +127,8 @@ class S3CacheStorage(object):
 
         url      = metadata['response_url']
         status   = metadata.get('status')
+
+        # bug in scrapy 1.0
         Response = responsetypes.from_args(headers=response_headers, url=url, body=response_body)
         return Response(url=url, headers=response_headers, status=status, body=response_body)
 
