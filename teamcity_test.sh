@@ -19,3 +19,5 @@ then
 fi
 
 pip install --upgrade -r requirements.txt
+
+/bin/bash runtests.sh
