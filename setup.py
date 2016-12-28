@@ -17,16 +17,16 @@ requires = [
 ]
 
 setup(
-    name='history',
+    name='scrapyhistory',
     version=history.__version__,
     description='Scrapy downloader middleware to enable persistent storage.',
-    long_description=open('README.md').read(),
+    #long_description=open('README.md').read(),
     author='Andrew Preston',
     author_email='andrew@preston.co.nz',
     url='http://github.com/playandbuild/scrapy-history-middleware',
     packages=packages,
     install_requires=requires,
-    license=open('LICENSE').read(),
+    #license=open('LICENSE').read(),
     classifiers=(
         'Development Status :: 4 - Beta'
         'Intended Audience :: Developers',
