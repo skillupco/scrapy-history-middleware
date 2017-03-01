@@ -2,8 +2,3 @@
 scrapy
 parsedatetime
 boto
-
-# Testing
-nose
-nose-cov
-coverage
