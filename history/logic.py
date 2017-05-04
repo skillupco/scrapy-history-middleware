@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from scrapy.conf import settings
 from scrapy.utils.httpobj import urlparse_cached
@@ -41,6 +41,7 @@ class LogicBase(object):
 
         return cacheable_request and cacheable_response
 
+
 class RetrieveBase(LogicBase):
     def __call__(self, spider, request, response=None):
         if self._cache_if(spider, request):
@@ -50,6 +51,7 @@ class RetrieveBase(LogicBase):
 
     def retrieve_if(self, spider, request):
         raise NotImplementedError("Please implement in your subclass.")
+
 
 class StoreBase(LogicBase):
     def __call__(self, spider, request, response):
@@ -69,6 +71,7 @@ class RetrieveNever(RetrieveBase):
     def retrieve_if(self, spider, request):
         return False
 
+
 class RetrieveAlways(RetrieveBase):
     """
     Always attempt to retrieve response from.
@@ -84,12 +87,14 @@ class StoreNever(StoreBase):
     def store_if(self, spider, request, response):
         return False
 
+
 class StoreAlways(StoreBase):
     """
     Always attempt to store response in cache.
     """
     def store_if(self, spider, request, response):
         return True
+
 
 class StoreDaily(StoreBase):
     """
