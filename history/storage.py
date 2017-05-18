@@ -20,15 +20,15 @@ class S3CacheStorage(object):
 
     def __init__(self, stats, settings=settings):
         # Required settings
-        self.S3_ACCESS_KEY   = settings.get('AWS_ACCESS_KEY_ID')
-        self.S3_SECRET_KEY   = settings.get('AWS_SECRET_ACCESS_KEY')
-        self.S3_CACHE_BUCKET = settings.get('HISTORY_S3_BUCKET')
+        self.S3_ACCESS_KEY = settings.get('AWS_ACCESS_KEY_ID')
+        self.S3_SECRET_KEY = settings.get('AWS_SECRET_ACCESS_KEY')
+        self.S3_CACHE_BUCKET = settings.get('HISTORY_S3_BUCKET', None)
 
         # Optional settings
-        self.use_proxy = settings.getbool('HISTORY_USE_PROXY', True)
-        self.SAVE_SOURCE = settings.get('HISTORY_SAVE_SOURCE')
+        self.use_proxy = settings.get('HISTORY_USE_PROXY', True)
+        self.SAVE_SOURCE = settings.get('HISTORY_SAVE_SOURCE',
+                                        '{name}/{ts}__{jobid}')
         self.stats = stats
-
 
     def _get_key(self, spider, request):
         key = request_fingerprint(request)
@@ -196,7 +196,7 @@ class S3CacheStorage(object):
 
             #save source file
             if self.SAVE_SOURCE:
-                job_folder = self.SAVE_SOURCE % self._get_uri_params(spider)
+                job_folder = self.SAVE_SOURCE.format(**self._get_uri_params(spider))
                 # if the S3 key is too long, the AWS interface does not allow to download the file !
                 source_url = request.url[:200] + '...' if len(request.url) > 200 else request.url
 

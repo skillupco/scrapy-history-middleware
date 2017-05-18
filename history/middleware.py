@@ -6,6 +6,10 @@ from scrapy.xlib.pydispatch import dispatcher
 from scrapy.exceptions import NotConfigured, IgnoreRequest
 from scrapy.utils.misc import load_object
 
+MANDATORY_SETTINGS = ['HISTORY_S3_BUCKET',
+                      'AWS_ACCESS_KEY_ID',
+                      'AWS_SECRET_ACCESS_KEY']
+
 
 class HistoryMiddleware(object):
     DATE_FORMAT = '%Y%m%d'
@@ -13,23 +17,25 @@ class HistoryMiddleware(object):
     def __init__(self, crawler):
         self.stats = crawler.stats
         settings = crawler.settings
-
-        history = settings.get('HISTORY', None)
-        if not history:
-            raise NotConfigured()
+        configured = all([settings.get(k, False) for k in MANDATORY_SETTINGS])
+        if not configured:
+            raise NotConfigured('__init__')
 
         # EPOCH:
         #   == False: don't retrieve historical data
         #   == True : retrieve most recent version
         #   == datetime(): retrieve next version after datetime()
         self.epoch = self.parse_epoch(settings.get('HISTORY_EPOCH', False))
-
-        self.retrieve_if = load_object(settings.get(
-            'HISTORY_RETRIEVE_IF', 'history.logic.RetrieveNever'))(settings)
-        self.store_if = load_object(settings.get(
-            'HISTORY_STORE_IF', 'history.logic.StoreAlways'))(settings)
-        self.storage = load_object(settings.get(
-            'HISTORY_BACKEND', 'history.storage.S3CacheStorage'))(self.stats, settings)
+        self.retrieve_if = load_object(
+            settings.get('HISTORY_RETRIEVE_IF',
+                         'history.logic.RetrieveNever'))(settings)
+        self.store_if = load_object(
+            settings.get('HISTORY_STORE_IF',
+                         'history.logic.StoreAlways'))(settings)
+        self.storage = load_object(
+            settings.get('HISTORY_BACKEND',
+                         'history.storage.S3CacheStorage'))(self.stats,
+                                                            settings)
         self.ignore_missing = settings.getbool('HTTPCACHE_IGNORE_MISSING')
 
         dispatcher.connect(self.spider_opened, signal=signals.spider_opened)
@@ -97,7 +103,7 @@ class HistoryMiddleware(object):
             pass
 
         parser = parsedatetime.Calendar(Constants())
-        time_tupple = parser.parse(epoch) # 'yesterday' => (time.struct_time, int)
+        time_tupple = parser.parse(epoch)  # 'yesterday' => (time.struct_time, int)
         if not time_tupple[1]:
             raise NotConfigured('Could not parse epoch: %s' % epoch)
         time_struct = time_tupple[0]      #=> time.struct_time(tm_year=2012, tm_mon=4, tm_mday=7, tm_hour=22, tm_min=8, tm_sec=6, tm_wday=5, tm_yday=98, tm_isdst=-1)

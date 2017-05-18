@@ -1,27 +1,27 @@
+
 import unittest
 from datetime import datetime
 
-from scrapy.conf import settings
 from scrapy.exceptions import NotConfigured
+from scrapy.utils.test import get_crawler
 
 from history.middleware import HistoryMiddleware
 
-
-settings.overrides['HISTORY'] = {
-    'S3_ACCESS_KEY': '',
-    'S3_SECRET_KEY': '',
-    'S3_BUCKET': '',
-}
+MANDATORY_SETTINGS = ['HISTORY_S3_BUCKET',
+                      'AWS_ACCESS_KEY_ID',
+                      'AWS_SECRET_ACCESS_KEY']
 
 
 class TestHistoryMiddleware(unittest.TestCase):
 
     def setUp(self):
-        self.middleware = HistoryMiddleware()
+        settings_dict = {k: 'mock setting' for k in MANDATORY_SETTINGS}
+        crawler = get_crawler(settings_dict=settings_dict)
+        self.middleware = HistoryMiddleware(crawler)
 
     def test_unconfigured_init(self):
         with self.assertRaises(NotConfigured):
-            self.middleware = HistoryMiddleware(settings={})
+            self.middleware = HistoryMiddleware(get_crawler())
 
     def test_parse_epoch(self):
         self.assertIsInstance(
