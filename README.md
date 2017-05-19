@@ -22,8 +22,8 @@ example:
     HISTORY_STORE_IF = 'history.logic.StoreAlways'
     HISTORY_RETRIEVE_IF = 'history.logic.RetrieveAlways'
     HISTORY_BACKEND = 'history.storage.S3CacheStorage'
-    HISTORY_SAVE_SOURCE = '{name}/{ts}__{jobid}'
-    HISTORY_S3_BUCKET = 'YOUR_S3_BUCKET'
+    HISTORY_SAVE_SOURCE = '{name}/{time}__{jobid}'
+    HISTORY_S3_BUCKET = 'YOUR_S3_CACHE_BUCKET_NAME'
     HISTORY_USE_PROXY = True
     HTTPCACHE_IGNORE_MISSING = False
 ```
@@ -125,10 +125,10 @@ You also have to add the settings in the `spider settings` section of the webpag
     HISTORY_STORE_IF= 'history.logic.StoreAlways'
     HISTORY_RETRIEVE_IF = 'history.logic.RetrieveAlways'
     HISTORY_BACKEND = 'history.storage.S3CacheStorage'
-    HISTORY_SAVE_SOURCE = '{name}/{ts}__{jobid}'
-    HISTORY_S3_ACCESS_KEY = {{ AWS_ACCESS_KEY_ID }}
-    HISTORY_S3_SECRET_KEY = {{ AWS_SECRET_ACCESS_KEY }}
-    HISTORY_S3_BUCKET = {{ S3_BUCKET }}
-    HISTORY_USE_PROXY = True 
+    HISTORY_SAVE_SOURCE = '{name}/{time}__{jobid}'
+    HISTORY_S3_ACCESS_KEY = 'YOUR_AWS_ACCESS_KEY_ID'
+    HISTORY_S3_SECRET_KEY = 'YOUR_AWS_SECRET_ACCESS_KEY'
+    HISTORY_S3_BUCKET = 'YOUR_S3_CACHE_BUCKET_NAME'
+    HISTORY_USE_PROXY = True
     HTTPCACHE_IGNORE_MISSING = False
 ```

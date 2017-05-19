@@ -1,33 +1,45 @@
 from __future__ import unicode_literals
 
-from datetime import datetime
-import logging
 import boto
 import base64
+from datetime import datetime
 import json
+import logging
 import urllib
 
-from scrapy import log
 from scrapy.conf import settings
-from scrapy.utils.request import request_fingerprint
-from scrapy.responsetypes import responsetypes
+from scrapy.exceptions import NotConfigured
 from scrapy.http import TextResponse, Headers
+from scrapy.responsetypes import responsetypes
+from scrapy.utils.request import request_fingerprint
+
+MANDATORY_SETTINGS = ['HISTORY_S3_BUCKET',
+                      'AWS_ACCESS_KEY_ID',
+                      'AWS_SECRET_ACCESS_KEY']
 
 
 logger = logging.getLogger(__name__)
 
+
 class S3CacheStorage(object):
 
     def __init__(self, stats, settings=settings):
-        # Required settings
+        # Mandatory settings
         self.S3_ACCESS_KEY = settings.get('AWS_ACCESS_KEY_ID')
         self.S3_SECRET_KEY = settings.get('AWS_SECRET_ACCESS_KEY')
         self.S3_CACHE_BUCKET = settings.get('HISTORY_S3_BUCKET', None)
+        configured = all([settings.get(k, False) for k in MANDATORY_SETTINGS])
+        if not configured:
+            raise NotConfigured('% are mandatoy settings, set them either from the settings file '
+                                'or from the Scrapinghub spider settings '
+                                'section.' % ','.join(MANDATORY_SETTINGS))
 
         # Optional settings
-        self.use_proxy = settings.get('HISTORY_USE_PROXY', True)
+        # boto s3_connection does not work through proxy.
+        # comment this line from the original file
+        # self.use_proxy = settings.get('HISTORY_USE_PROXY', False)
         self.SAVE_SOURCE = settings.get('HISTORY_SAVE_SOURCE',
-                                        '{name}/{ts}__{jobid}')
+                                        '{name}/{time}__no_job_id')
         self.stats = stats
 
     def _get_key(self, spider, request):
@@ -35,14 +47,23 @@ class S3CacheStorage(object):
         return '%s/cache/%s' % (spider.name, key)
 
     def open_spider(self, spider):
-        self.s3_connection = boto.connect_s3(self.S3_ACCESS_KEY, self.S3_SECRET_KEY, is_secure=False)
-        self.s3_connection.use_proxy = self.use_proxy
-        #use spider fields to replace var in bucket string
-        if self.S3_CACHE_BUCKET:
-            self.S3_CACHE_BUCKET = self.S3_CACHE_BUCKET % self._get_uri_params(spider)
-
-        self.s3_bucket = self.s3_connection.get_bucket(self.S3_CACHE_BUCKET, validate=False)
-        #self.versioning = self.s3_bucket.get_versioning_status() #=> {} or {'Versioning': 'Enabled'}
+        self.s3_connection = boto.connect_s3(self.S3_ACCESS_KEY,
+                                             self.S3_SECRET_KEY,
+                                             # Fails with understandable Traceback
+                                             # if is_secure is set to True.
+                                             # Else it will fail on S3Connection.get_bucket()
+                                             # with a super vague message Trace:
+                                             # TypeError: int() argument must be a string
+                                             #   or a number, not 'NoneType'
+                                             is_secure=True)
+        # S3Connection does not work when using proxy. S3Connection.use_proxy must be set to False.
+        self.s3_connection.use_proxy = False
+        # Use spider fields to replace var in key name.
+        self.SAVE_SOURCE = self.SAVE_SOURCE.format(**self._get_uri_params(spider))
+        # The bucket keeps the name given 
+        self.s3_bucket = self.s3_connection.get_bucket(self.S3_CACHE_BUCKET)
+        # self.versioning = self.s3_bucket.get_versioning_status()
+        # => {} or {'Versioning': 'Enabled'}
 
     def close_spider(self, spider):
         self.s3_connection.close()
@@ -98,7 +119,7 @@ class S3CacheStorage(object):
         """
         key = self._get_key(spider, request)
 
-        epoch = request.meta.get('epoch') # guaranteed to be True or datetime
+        epoch = request.meta.get('epoch')  # guaranteed to be True or datetime
         s3_key = self._get_s3_key(key, epoch)
         logger.debug('S3Storage retrieving response for key %s.' % (s3_key))
 
@@ -116,22 +137,22 @@ class S3CacheStorage(object):
 
         data = json.loads(data_string)
 
-        metadata         = data['metadata']
-        request_headers  = Headers(data['request_headers'])
-        request_body     = data['request_body']
+        metadata = data['metadata']
+        # request_headers = Headers(data['request_headers'])
+        # request_body = data['request_body']
         response_headers = Headers(data['response_headers'])
-        response_body    = data['response_body']
+        response_body = data['response_body']
 
-        if 'binary' in data and data['binary'] == True:
+        if 'binary' in data and data['binary'] is True:
             logger.debug('S3Storage: retrieved binary body')
             response_body = base64.decode(response_body)
 
-        url      = metadata['response_url']
-        status   = metadata.get('status')
+        url = metadata['response_url']
+        status = metadata.get('status')
 
-        logger.debug('S3Storage: response headers {} '.format(response_headers))
+        logger.debug('S3Storage: response headers {}'.format(response_headers))
         Response = responsetypes.from_args(headers=response_headers, url=url, body=response_body)
-        logger.debug('S3Storage: response type {} '.format(Response))
+        logger.debug('S3Storage: response type {}'.format(Response))
 
         return Response(url=url, headers=response_headers, status=status, body=response_body)
 
@@ -141,19 +162,21 @@ class S3CacheStorage(object):
         """
         logger.info('S3Storage: storing response for %s.' % request.url)
         key = self._get_key(spider, request)
-
         logger.info('S3Storage: path %s' % key)
-        logger.debug('S3Storage: response type {} '.format(type(response)))
+        logger.debug('S3Storage: response type {}'.format(type(response)))
+
         if isinstance(response, TextResponse):
-            # Textual response (HTMl, XML, csv, etc.), decoded to unicode using encoding (from Content-Type)
+            # Textual response (HTMl, XML, csv, etc.),
+            # decoded to unicode using encoding (from Content-Type)
             binary = False
             response_body = response.body.decode(response.encoding)
-            logger.debug('S3Storage: encoding {} '.format(response.encoding))
+            logger.debug('S3Storage: encoding {}'.format(response.encoding))
+
         else:
             # Binary response (excel, pdf, etc.)
             binary = True
             response_body = base64.b64encode(response.body)
-            logger.debug('S3Storage: body type {} '.format(type(response_body)))
+            logger.debug('S3Storage: body type {}'.format(type(response_body)))
         logger.debug('S3Storage: request header {}'.format(request.headers))
         logger.debug('S3Storage: response header {}'.format(response.headers))
 
@@ -162,23 +185,22 @@ class S3CacheStorage(object):
             'method': request.method,
             'status': response.status,
             'response_url': response.url,
-            #'timestamp': time(), # This will become the epoch
+            # 'timestamp': time(), # This will become the epoch
         }
 
         data = {
             'binary': binary,
-            'metadata'        : metadata,
-            'request_headers' : request.headers,
-            'request_body'    : request.body,
+            'metadata': metadata,
+            'request_headers': request.headers,
+            'request_body': request.body,
             'response_headers': response.headers,
-            'response_body'   : response_body
+            'response_body': response_body
         }
 
         data_string = json.dumps(data, ensure_ascii=False, encoding='utf-8')
 
-
         # sometimes can cause memory error in SH if too big
-        logger.debug('S3Storage: request/response json object size  {} kB'.format(len(data_string) / 1024))
+        logger.debug('S3Storage: request/response object size {}kB'.format(len(data_string) / 1024))
 
         # With versioning enabled creating a new s3_key is not
         # necessary. We could just write over an old s3_key. However,
@@ -187,24 +209,25 @@ class S3CacheStorage(object):
         s3_key = self.s3_bucket.new_key(key)
 
         try:
-            #s3_key.update_metadata(metadata) #=> can't use this as need to cast to unicode
+            # s3_key.update_metadata(metadata) #=> can't use this as need to cast to unicode
             for k, v in metadata.items():
                 if isinstance(v, str):
                     v = v[:400] + '...' if len(v) > 400 else v
                 s3_key.set_metadata(k, unicode(v))
             s3_key.set_contents_from_string(data_string)
-
-            #save source file
+            # save source file
             if self.SAVE_SOURCE:
-                job_folder = self.SAVE_SOURCE.format(**self._get_uri_params(spider))
+                job_folder = self.SAVE_SOURCE
                 # if the S3 key is too long, the AWS interface does not allow to download the file !
                 source_url = request.url[:200] + '...' if len(request.url) > 200 else request.url
 
-                source_name = "{}/source/{}__{}".format(job_folder, request_fingerprint(request), urllib.quote_plus(source_url))
+                source_name = "{}/source/{}__{}".format(job_folder, request_fingerprint(request),
+                                                        urllib.quote_plus(source_url))
                 source_key = self.s3_bucket.new_key(source_name)
                 source_key.set_contents_from_string(response.body)
                 # sometimes can cause memory error in SH if too big
                 logger.debug('S3Storage: body size  {} kB'.format(len(response.body) / 1024))
+
         except boto.exception.S3ResponseError as e:
             # http://docs.pythonboto.org/en/latest/ref/boto.html#module-boto.exception
             #   S3CopyError        : Error copying a key on S3.
@@ -212,16 +235,17 @@ class S3CacheStorage(object):
             #   S3DataError        : Error receiving data from S3.
             #   S3PermissionsError : Permissions error when accessing a bucket or key on S3.
             #   S3ResponseError    : Error in response from S3.
-            #if e.status == 404:   # Not found; probably the wrong bucket name
+            #  if e.status == 404:   # Not found; probably the wrong bucket name
             #    log.msg('S3Storage: %s %s - %s' % (e.status, e.reason, e.body), log.ERROR)
-            #elif e.status == 403: # Forbidden; probably incorrect credentials
+            #  elif e.status == 403: # Forbidden; probably incorrect credentials
             #    log.msg('S3Storage: %s %s - %s' % (e.status, e.reason, e.body), log.ERROR)
             raise e
+
         finally:
             source_key.close()
             s3_key.close()
 
-    #from https://github.com/scrapy/scrapy/blob/342cb622f1ea93268477da557099010bbd72529a/scrapy/extensions/feedexport.py
+    # from https://github.com/scrapy/scrapy/blob/342cb622f1ea93268477da557099010bbd72529a/scrapy/extensions/feedexport.py
     def _get_uri_params(self, spider):
         params = {}
         for k in dir(spider):
