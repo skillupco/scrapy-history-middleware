@@ -2,7 +2,7 @@
 """
 
 __title__ = 'history'
-__version__ = '0.9.3'
+__version__ = '0.9.6'
 
 
 #from history.middleware import HistoryMiddleware
