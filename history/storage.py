@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import unicode_literals
 
 import base64
@@ -265,7 +267,7 @@ class S3CacheStorage(object):
             source_key.close()
             s3_key.close()
 
-    # from https://github.com/scrapy/scrapy/blob/342cb622f1ea93268477da557099010bbd72529a/scrapy/extensions/feedexport.py
+    # from https://github.com/scrapy/scrapy/blob/342cb622f1ea93268477da557099010bbd72529a/scrapy/extensions/feedexport.py  # noqa
     def _get_uri_params(self, spider):
         params = {}
         for k in dir(spider):
