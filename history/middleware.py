@@ -1,6 +1,8 @@
-from datetime import datetime
-from parsedatetime import parsedatetime, Constants
+# -*- coding: utf-8 -*-
 
+from datetime import datetime
+
+from parsedatetime import parsedatetime, Constants
 from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
 from scrapy.exceptions import NotConfigured, IgnoreRequest
@@ -56,8 +58,7 @@ class HistoryMiddleware(object):
         self.retrieve_if.spider_closed(spider)
 
     def process_request(self, request, spider):
-        """
-        A request is approaching the Downloader.
+        """A request is approaching the Downloader.
 
         Decide if we would like to intercept the request and supply a
         response ourselves.
@@ -72,8 +73,7 @@ class HistoryMiddleware(object):
                 raise IgnoreRequest("Ignored; request not in history: %s" % request)
 
     def process_response(self, request, response, spider):
-        """
-        A response is leaving the Downloader. It was either retreived
+        """A response is leaving the Downloader. It was either retreived
         from the web or from another middleware.
 
         Decide if we would like to store it in the history.
@@ -106,5 +106,5 @@ class HistoryMiddleware(object):
         time_tupple = parser.parse(epoch)  # 'yesterday' => (time.struct_time, int)
         if not time_tupple[1]:
             raise NotConfigured('Could not parse epoch: %s' % epoch)
-        time_struct = time_tupple[0]      #=> time.struct_time(tm_year=2012, tm_mon=4, tm_mday=7, tm_hour=22, tm_min=8, tm_sec=6, tm_wday=5, tm_yday=98, tm_isdst=-1)
-        return datetime(*time_struct[:6]) #=> datetime.datetime(2012, 4, 7, 22, 8, 6)
+        time_struct = time_tupple[0]       # => time.struct_time(tm_year=2012, tm_mon=4, tm_mday=7, tm_hour=22, tm_min=8, tm_sec=6, tm_wday=5, tm_yday=98, tm_isdst=-1)  # noqa
+        return datetime(*time_struct[:6])  # => datetime.datetime(2012, 4, 7, 22, 8, 6)

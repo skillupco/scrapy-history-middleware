@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from datetime import datetime
 
 from scrapy.conf import settings
@@ -17,8 +19,7 @@ class LogicBase(object):
         pass
 
     def _cache_if(self, spider, request, response=None):
-        """
-        A request is cacheable if the URI scheme is not in
+        """A request is cacheable if the URI scheme is not in
         HTTPCACHE_IGNORE_SCHEMES. By default:
             file:// - not cacheable
             http:// - cacheable
@@ -26,18 +27,19 @@ class LogicBase(object):
         A response is cacheable if the http response code is not in
         HTTPCACHE_IGNORE_HTTP_CODES. For example, we may choose to
         ignore 404.
+
         """
-        cacheable_request = (
-            urlparse_cached(request).scheme not in self.ignore_schemes )
+        cacheable_request = urlparse_cached(request).scheme not in self.ignore_schemes
 
         if (not response) or (not cacheable_request):
             # == if not (response and cacheable_request)
             return cacheable_request
 
         cacheable_response = (
-            'cached'   not in response.flags and # from HttpCacheMiddleware
-            'historic' not in response.flags and # from HistoryMiddleware
-            response.status not in self.ignore_http_codes )
+            'cached' not in response.flags and      # from HttpCacheMiddleware
+            'historic' not in response.flags and    # from HistoryMiddleware
+            response.status not in self.ignore_http_codes
+        )
 
         return cacheable_request and cacheable_response
 
@@ -65,40 +67,30 @@ class StoreBase(LogicBase):
 
 
 class RetrieveNever(RetrieveBase):
-    """
-    Never attempt to retrieve response from cache.
-    """
+    """Never attempt to retrieve response from cache.."""
     def retrieve_if(self, spider, request):
         return False
 
 
 class RetrieveAlways(RetrieveBase):
-    """
-    Always attempt to retrieve response from.
-    """
+    """Always attempt to retrieve response from."""
     def retrieve_if(self, spider, request):
         return True
 
 
 class StoreNever(StoreBase):
-    """
-    Never attempt to store response in cache.
-    """
+    """Never attempt to store response in cache."""
     def store_if(self, spider, request, response):
         return False
 
 
 class StoreAlways(StoreBase):
-    """
-    Always attempt to store response in cache.
-    """
+    """Always attempt to store response in cache."""
     def store_if(self, spider, request, response):
         return True
 
 
 class StoreDaily(StoreBase):
-    """
-    Store response only if it is currently between midnight and 1am.
-    """
+    """Store response only if it is currently between midnight and 1am."""
     def store_if(self, spider, request, response):
         return datetime.now().hour == 0

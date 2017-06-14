@@ -1,0 +1,21 @@
+# Works with build image 14.04 (Trusty)
+
+dependencies:
+  pre:
+    # setup test env/isolation
+    - mkdir -p $CIRCLE_TEST_REPORTS/flake8
+    - mkdir -p $CIRCLE_TEST_REPORTS/nosetests
+    - mkdir -p $CIRCLE_TEST_REPORTS/coverage
+    # install actual dependencies
+    - pip install --upgrade pip
+    - pip install --upgrade -r dev-requirements.txt
+
+test:
+  override:
+    # only diff branch changes
+    - git diff master | flake8 --diff --output-file=$CIRCLE_TEST_REPORTS/flake8/report.txt history/
+    - >
+      nosetests -v --with-timer
+      --with-xunit --xunit-file=$CIRCLE_TEST_REPORTS/nosetests/tests.xml
+      --with-coverage --cover-min-percentage=37 --cover-html --cover-erase --cover-package=history
+      --cover-html-dir=$CIRCLE_TEST_REPORTS/coverage/history
