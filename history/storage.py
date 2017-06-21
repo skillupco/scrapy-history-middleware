@@ -52,7 +52,7 @@ def _truncate_metadata_fields(metadata, max_length=400):
     truncated_fields = {}
     # s3_key.update_metadata(metadata) #=> can't use this as need to cast to unicode
     for k, v in metadata.items():
-        v = unicode(v)
+        v = u'' + str(v)
         v = v[:max_length] + '...' if len(v) > max_length else v
         truncated_fields[k] = v
     return truncated_fields
@@ -167,7 +167,8 @@ class S3CacheStorage(object):
         if not s3_key:
             return
 
-        logger.info(' (epoch => {epoch}): retrieving response for {url}.'.format(epoch=epoch, url=request.url))
+        logger.info(' (epoch => {epoch}): retrieving response for {url}.'.format(epoch=epoch,
+                                                                                 url=request.url))
         try:
             data_string = s3_key.get_contents_as_string()
         except boto.exception.S3ResponseError as e:
@@ -181,7 +182,7 @@ class S3CacheStorage(object):
         metadata = data['metadata']
         response_headers = Headers(data['response_headers'])
         response_body = data['response_body']
-        
+
         if data.get('binary', False):
             logger.debug('retrieved binary body')
             response_body = base64.b64decode(response_body.decode('utf8'))
