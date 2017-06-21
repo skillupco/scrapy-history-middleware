@@ -52,8 +52,9 @@ def _truncate_metadata_fields(metadata, max_length=400):
     truncated_fields = {}
     # s3_key.update_metadata(metadata) #=> can't use this as need to cast to unicode
     for k, v in metadata.items():
+        v = unicode(v)
         v = v[:max_length] + '...' if len(v) > max_length else v
-        truncated_fields[k] = unicode(v)
+        truncated_fields[k] = v
     return truncated_fields
 
 
