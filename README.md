@@ -1,4 +1,4 @@
-scrapy-history-middleware
+Scrapy History Middleware
 =========================
 
 [![CircleCI](https://circleci.com/gh/Kpler/scrapy-history-middleware.svg?style=svg)](https://circleci.com/gh/Kpler/scrapy-history-middleware)
@@ -28,7 +28,7 @@ example:
     HTTPCACHE_IGNORE_MISSING = False
 ```
 
-Will store and retrieve responses exactly as you expect. However, even
+will store and retrieve responses exactly as you expect. However, even
 if multiple developers are working on the same spider, the spidered
 website will only ever see one request (so long as they all use the
 same S3 bucket).
@@ -37,18 +37,6 @@ Scrapy introduced the `DbmCacheStorage` backend in version 0.13. In
 principle this is capable of interfacing with S3, but the history
 middleware is still necessary as it provides versioning capability.
 
-## Requirements
-
-To run the middleware:
-
-  * `parsedatetime`
-  * `boto`. If using the S3 storage backend.
-
-Testing:
-
-  * `nose`
-  * `nose-cov`
-  * `coverage`
 
 ## Config
 
@@ -58,56 +46,55 @@ middleware. As such, the default logic modules use
 `HTTPCACHE_IGNORE_HTTP_CODES`, and responses will not be stored if
 they are flagged as having returned from the cache storage.
 
-### Epoch
 
-# Settings:
+## Settings
 
-  * `HISTORY_USE_PROXY`:
-    Usage: HISTORY_EPOCH can either be defined in `settings.py`,
-    `local_settings.py`, or on the command line, eg.,:
+* `HISTORY_USE_PROXY`: can either be defined in `settings.py`,
+  `local_settings.py`, or on the command line:
+
+  ```bash
+  $ scrapy crawl {{ spider }} --set="HISTORY_EPOCH=yesterday"
+  ```
   
-    ```bash
-  	$ scrapy crawl {{ spider }} --set="HISTORY_EPOCH=yesterday"
-    ```
-    
-    Note that scrapy will choose the value in local_settings.py over the
-    command line.
+  Note that scrapy will choose the value in local_settings.py over the
+  command line.
 
-    Possible values:
-  
-      * `True`: The middleware will always try to retrieve the most
-        recently stored version of a url, subject to the logic in
-        `RETRIEVE_IF`.
+  Possible values:
 
-      * `False` (default): The middleware won't ever try to retrieve
-        stored responses.
+    * `True`: The middleware will always try to retrieve the most
+      recently stored version of a url, subject to the logic in
+      `RETRIEVE_IF`.
 
-      * `{{ string }}`: The middleware will attempt to generate a datetime
-        using the heuristics of the
-        [parsedatetime](http://code.google.com/p/parsedatetime/)
-        module. The retrieved response will either be newer than `EPOCH`,
-        or the most recently stored response.
+    * `False` (default): The middleware won't ever try to retrieve
+      stored responses.
 
-  * `HISTORY_STORE_IF`: (default `history.logic.StoreAlways`) Path to a
-    callable that accepts the current spider, request, and response as
-    arguments and returns `True` if the response should be stored, or
-    `False` otherwise.
+    * `{{ string }}`: The middleware will attempt to generate a datetime
+      using the heuristics of the
+      [parsedatetime](http://code.google.com/p/parsedatetime/)
+      module. The retrieved response will either be newer than `EPOCH`,
+      or the most recently stored response.
 
-  * `HISTORY_RETRIEVE_IF`: (default `history.logic.RetrieveNever`) Path to a
-    callable that accepts the current spider and request as arguments
-    and returns `True` if the response should be retrieved from the
-    storage backend, or `False` otherwise.
+* `HISTORY_STORE_IF`: (default `history.logic.StoreAlways`) Path to a
+  callable that accepts the current spider, request, and response as
+  arguments and returns `True` if the response should be stored, or
+  `False` otherwise.
 
-  * `HISTORY_BACKEND`: (default `history.storage.S3CacheStorage`) The storage
-    backend.
+* `HISTORY_RETRIEVE_IF`: (default `history.logic.RetrieveNever`) Path to a
+  callable that accepts the current spider and request as arguments
+  and returns `True` if the response should be retrieved from the
+  storage backend, or `False` otherwise.
 
-  * `S3_ACCESS_KEY`: Required if using `S3CacheStorage`.
+* `HISTORY_BACKEND`: (default `history.storage.S3CacheStorage`) The storage
+  backend.
 
-  * `S3_BUCKET_KEY`: Required if using `S3CacheStorage`.
+* `S3_ACCESS_KEY`: Required if using `S3CacheStorage`.
 
-  * `HISTORY_S3_BUCKET`: Required if using `S3CacheStorage`.
+* `S3_BUCKET_KEY`: Required if using `S3CacheStorage`.
 
-  * `HISTORY_USE_PROXY`: Mention if boto should be using a proxy to connect to the S3 bucket
+* `HISTORY_S3_BUCKET`: Required if using `S3CacheStorage`.
+
+* `HISTORY_USE_PROXY`: Mention if boto should be using a proxy to connect to the S3 bucket
+
 
 ## Using it with Scrapinghub
 

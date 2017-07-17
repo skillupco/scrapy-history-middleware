@@ -10,7 +10,6 @@ import os
 import urllib
 
 import boto
-from scrapy.conf import settings
 from scrapy.exceptions import NotConfigured
 from scrapy.http import TextResponse, Headers
 from scrapy.responsetypes import responsetypes
@@ -26,7 +25,6 @@ MANDATORY_SETTINGS = [
 # It also makes it possible to find sources by job id and execution time
 # in order to replay history.
 DEFAULT_S3_SOURCE_TEMPLATE = '{name}/{time}_{jobid}'
-
 
 logger = logging.getLogger('{}:'.format(__name__))
 
@@ -45,6 +43,7 @@ def _reformat_response(response):
         # encode it to be able to store it on S3 as a string
         response_body = base64.b64encode(response.body)
         logger.debug('encoded binary response to base64')
+
     return response_body, binary
 
 
@@ -55,6 +54,7 @@ def _truncate_metadata_fields(metadata, max_length=400):
         v = u'' + str(v)
         v = v[:max_length] + '...' if len(v) > max_length else v
         truncated_fields[k] = v
+
     return truncated_fields
 
 
@@ -64,7 +64,7 @@ def _truncate_url(url, max_length=200):
 
 class S3CacheStorage(object):
 
-    def __init__(self, stats, general_settings=settings):
+    def __init__(self, stats, general_settings):
         # Mandatory settings
         self.S3_ACCESS_KEY = general_settings.get('AWS_ACCESS_KEY_ID')
         self.S3_SECRET_KEY = general_settings.get('AWS_SECRET_ACCESS_KEY')
@@ -167,8 +167,8 @@ class S3CacheStorage(object):
         if not s3_key:
             return
 
-        logger.info(' (epoch => {epoch}): retrieving response for {url}.'.format(epoch=epoch,
-                                                                                 url=request.url))
+        logger.info('(epoch => {epoch}): retrieving response for {url}.'.format(epoch=epoch,
+                                                                                url=request.url))
         try:
             data_string = s3_key.get_contents_as_string()
         except boto.exception.S3ResponseError as e:
@@ -201,8 +201,7 @@ class S3CacheStorage(object):
                         **encoding)
 
     def store_response(self, spider, request, response):
-        """
-        Store the given response in the cache.
+        """Store the given response in the cache.
 
         """
         logger.info('storing response for {}.'.format(request.url))

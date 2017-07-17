@@ -4,23 +4,33 @@ from datetime import datetime
 
 from parsedatetime import parsedatetime, Constants
 from scrapy import signals
-from scrapy.xlib.pydispatch import dispatcher
 from scrapy.exceptions import NotConfigured, IgnoreRequest
 from scrapy.utils.misc import load_object
 
 MANDATORY_SETTINGS = ['HISTORY_S3_BUCKET',
                       'AWS_ACCESS_KEY_ID',
                       'AWS_SECRET_ACCESS_KEY']
+EPOCH_DATE_FORMAT = '%Y%m%d'
+
+
+def ignore_on_fail(func):
+    def _inner(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            raise IgnoreRequest('middleware crashed: {err}'.format(err=e))
+    return _inner
 
 
 class HistoryMiddleware(object):
-    DATE_FORMAT = '%Y%m%d'
 
     def __init__(self, crawler):
         self.stats = crawler.stats
         settings = crawler.settings
+
         configured = all([settings.get(k, False) for k in MANDATORY_SETTINGS])
         if not configured:
+            # deactivate the login if we can't talk to S3 anyway
             raise NotConfigured('__init__')
 
         # EPOCH:
@@ -29,22 +39,22 @@ class HistoryMiddleware(object):
         #   == datetime(): retrieve next version after datetime()
         self.epoch = self.parse_epoch(settings.get('HISTORY_EPOCH', False))
         self.retrieve_if = load_object(
-            settings.get('HISTORY_RETRIEVE_IF',
-                         'history.logic.RetrieveNever'))(settings)
+            settings.get('HISTORY_RETRIEVE_IF', 'history.logic.RetrieveNever'))(settings)
         self.store_if = load_object(
-            settings.get('HISTORY_STORE_IF',
-                         'history.logic.StoreAlways'))(settings)
+            settings.get('HISTORY_STORE_IF', 'history.logic.StoreAlways'))(settings)
         self.storage = load_object(
             settings.get('HISTORY_BACKEND',
-                         'history.storage.S3CacheStorage'))(self.stats,
-                                                            settings)
+                         'history.storage.S3CacheStorage'))(self.stats, settings)
         self.ignore_missing = settings.getbool('HTTPCACHE_IGNORE_MISSING')
-
-        dispatcher.connect(self.spider_opened, signal=signals.spider_opened)
-        dispatcher.connect(self.spider_closed, signal=signals.spider_closed)
 
     @classmethod
     def from_crawler(cls, crawler):
+        # instantiate the extension object
+        ext = cls()
+
+        crawler.signals.connect(ext.spider_opened, signal=signals.spider_opened)
+        crawler.signals.connect(ext.spider_closed, signal=signals.spider_closed)
+
         return cls(crawler)
 
     def spider_opened(self, spider):
@@ -57,6 +67,7 @@ class HistoryMiddleware(object):
         self.store_if.spider_closed(spider)
         self.retrieve_if.spider_closed(spider)
 
+    @ignore_on_fail
     def process_request(self, request, spider):
         """A request is approaching the Downloader.
 
@@ -72,6 +83,7 @@ class HistoryMiddleware(object):
             elif self.ignore_missing:
                 raise IgnoreRequest("Ignored; request not in history: %s" % request)
 
+    @ignore_on_fail
     def process_response(self, request, response, spider):
         """A response is leaving the Downloader. It was either retreived
         from the web or from another middleware.
@@ -84,12 +96,8 @@ class HistoryMiddleware(object):
 
         return response
 
-    def parse_epoch(self, epoch):
-        """
-        bool     => bool
-        datetime => datetime
-        str      => datetime
-        """
+    @staticmethod
+    def parse_epoch(epoch):
         if isinstance(epoch, bool) or isinstance(epoch, datetime):
             return epoch
         elif epoch == 'True':
@@ -98,7 +106,7 @@ class HistoryMiddleware(object):
             return False
 
         try:
-            return datetime.strptime(epoch, self.DATE_FORMAT)
+            return datetime.strptime(epoch, EPOCH_DATE_FORMAT)
         except ValueError:
             pass
 
@@ -106,5 +114,7 @@ class HistoryMiddleware(object):
         time_tupple = parser.parse(epoch)  # 'yesterday' => (time.struct_time, int)
         if not time_tupple[1]:
             raise NotConfigured('Could not parse epoch: %s' % epoch)
-        time_struct = time_tupple[0]       # => time.struct_time(tm_year=2012, tm_mon=4, tm_mday=7, tm_hour=22, tm_min=8, tm_sec=6, tm_wday=5, tm_yday=98, tm_isdst=-1)  # noqa
-        return datetime(*time_struct[:6])  # => datetime.datetime(2012, 4, 7, 22, 8, 6)
+
+        time_struct = time_tupple[0]
+
+        return datetime(*time_struct[:6])

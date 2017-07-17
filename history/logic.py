@@ -2,12 +2,12 @@
 
 from datetime import datetime
 
-from scrapy.conf import settings
 from scrapy.utils.httpobj import urlparse_cached
 
 
 class LogicBase(object):
-    def __init__(self, settings=settings):
+
+    def __init__(self, settings):
         self.ignore_missing = settings.getbool('HTTPCACHE_IGNORE_MISSING', False)
         self.ignore_schemes = settings.getlist('HTTPCACHE_IGNORE_SCHEMES', ['file'])
         self.ignore_http_codes = map(int, settings.getlist('HTTPCACHE_IGNORE_HTTP_CODES', []))
