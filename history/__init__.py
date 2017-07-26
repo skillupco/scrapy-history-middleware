@@ -1,4 +1,4 @@
 # -*- coding: utf-8 -*-
 
-__title__ = 'history'
-__version__ = '0.9.10'
+__package__ = 'scrapyhistory'
+__version__ = '0.10.2'

@@ -19,12 +19,12 @@ requires = [
 ]
 
 setup(
-    name='scrapyhistory',
+    name=history.__package__,
     version=history.__version__,
     description='Scrapy downloader middleware to enable persistent storage.',
     author='Andrew Preston',
     author_email='andrew@preston.co.nz',
-    url='http://github.com/playandbuild/scrapy-history-middleware',
+    url='http://github.com/Kpler/scrapy-history-middleware',
     packages=packages,
     install_requires=requires,
     classifiers=(

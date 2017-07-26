@@ -1,26 +1,51 @@
 # -*- coding: utf-8 -*-
 
 from datetime import datetime
+import logging
 
 from parsedatetime import parsedatetime, Constants
 from scrapy import signals
-from scrapy.xlib.pydispatch import dispatcher
 from scrapy.exceptions import NotConfigured, IgnoreRequest
 from scrapy.utils.misc import load_object
+
+logger = logging.getLogger(__name__)
 
 MANDATORY_SETTINGS = ['HISTORY_S3_BUCKET',
                       'AWS_ACCESS_KEY_ID',
                       'AWS_SECRET_ACCESS_KEY']
+EPOCH_DATE_FORMAT = '%Y%m%d'
+
+
+def ignore_on_fail(func):
+    """This middleware serves tooling/debugging purposes. It shouldn't kill a
+    scrapy spider because of its own failures.
+
+    NOTE: built-in `process_exception` could be helpful here, although I find
+    its genericity makes it harder to use at the moment (see
+    https://doc.scrapy.org/en/latest/topics/downloader-middleware.htm for
+    more).
+
+    """
+    def _inner(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.warning('middleware crashed: {err}'.format(err=e))
+            # tell scrapy to ignore this middleware for this request and go on
+            return None
+
+    return _inner
 
 
 class HistoryMiddleware(object):
-    DATE_FORMAT = '%Y%m%d'
 
     def __init__(self, crawler):
         self.stats = crawler.stats
         settings = crawler.settings
+
         configured = all([settings.get(k, False) for k in MANDATORY_SETTINGS])
         if not configured:
+            # deactivate the login if we can't talk to S3 anyway
             raise NotConfigured('__init__')
 
         # EPOCH:
@@ -29,23 +54,23 @@ class HistoryMiddleware(object):
         #   == datetime(): retrieve next version after datetime()
         self.epoch = self.parse_epoch(settings.get('HISTORY_EPOCH', False))
         self.retrieve_if = load_object(
-            settings.get('HISTORY_RETRIEVE_IF',
-                         'history.logic.RetrieveNever'))(settings)
+            settings.get('HISTORY_RETRIEVE_IF', 'history.logic.RetrieveNever'))(settings)
         self.store_if = load_object(
-            settings.get('HISTORY_STORE_IF',
-                         'history.logic.StoreAlways'))(settings)
+            settings.get('HISTORY_STORE_IF', 'history.logic.StoreAlways'))(settings)
         self.storage = load_object(
             settings.get('HISTORY_BACKEND',
-                         'history.storage.S3CacheStorage'))(self.stats,
-                                                            settings)
+                         'history.storage.S3CacheStorage'))(self.stats, settings)
         self.ignore_missing = settings.getbool('HTTPCACHE_IGNORE_MISSING')
-
-        dispatcher.connect(self.spider_opened, signal=signals.spider_opened)
-        dispatcher.connect(self.spider_closed, signal=signals.spider_closed)
 
     @classmethod
     def from_crawler(cls, crawler):
-        return cls(crawler)
+        # instantiate the extension object
+        ext = cls(crawler)
+
+        crawler.signals.connect(ext.spider_opened, signal=signals.spider_opened)
+        crawler.signals.connect(ext.spider_closed, signal=signals.spider_closed)
+
+        return ext
 
     def spider_opened(self, spider):
         self.storage.open_spider(spider)
@@ -57,6 +82,7 @@ class HistoryMiddleware(object):
         self.store_if.spider_closed(spider)
         self.retrieve_if.spider_closed(spider)
 
+    @ignore_on_fail
     def process_request(self, request, spider):
         """A request is approaching the Downloader.
 
@@ -78,18 +104,17 @@ class HistoryMiddleware(object):
 
         Decide if we would like to store it in the history.
         """
-        if self.store_if(spider, request, response):
-            self.storage.store_response(spider, request, response)
-            self.stats.set_value('history/cached', True, spider=spider)
+        try:
+            if self.store_if(spider, request, response):
+                self.storage.store_response(spider, request, response)
+                self.stats.set_value('history/cached', True, spider=spider)
+        except Exception as e:
+            logger.error('failed to process response: {}'.format(e))
+        finally:
+            return response
 
-        return response
-
-    def parse_epoch(self, epoch):
-        """
-        bool     => bool
-        datetime => datetime
-        str      => datetime
-        """
+    @staticmethod
+    def parse_epoch(epoch):
         if isinstance(epoch, bool) or isinstance(epoch, datetime):
             return epoch
         elif epoch == 'True':
@@ -98,7 +123,7 @@ class HistoryMiddleware(object):
             return False
 
         try:
-            return datetime.strptime(epoch, self.DATE_FORMAT)
+            return datetime.strptime(epoch, EPOCH_DATE_FORMAT)
         except ValueError:
             pass
 
@@ -106,5 +131,7 @@ class HistoryMiddleware(object):
         time_tupple = parser.parse(epoch)  # 'yesterday' => (time.struct_time, int)
         if not time_tupple[1]:
             raise NotConfigured('Could not parse epoch: %s' % epoch)
-        time_struct = time_tupple[0]       # => time.struct_time(tm_year=2012, tm_mon=4, tm_mday=7, tm_hour=22, tm_min=8, tm_sec=6, tm_wday=5, tm_yday=98, tm_isdst=-1)  # noqa
-        return datetime(*time_struct[:6])  # => datetime.datetime(2012, 4, 7, 22, 8, 6)
+
+        time_struct = time_tupple[0]
+
+        return datetime(*time_struct[:6])

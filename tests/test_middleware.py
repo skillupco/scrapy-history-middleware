@@ -24,7 +24,14 @@ class TestHistoryMiddleware(unittest.TestCase):
         with self.assertRaises(NotConfigured):
             self.middleware = HistoryMiddleware(get_crawler())
 
-    def test_parse_epoch(self):
-        self.assertIsInstance(
-            self.middleware.parse_epoch('yesterday'),
-            datetime)
+    def test_parse_booleannd_dt_epoch(self):
+        self.assertTrue(HistoryMiddleware.parse_epoch('True'))
+        self.assertFalse(HistoryMiddleware.parse_epoch('False'))
+        self.assertTrue(HistoryMiddleware.parse_epoch(True))
+        self.assertFalse(HistoryMiddleware.parse_epoch(False))
+
+        some_dt = datetime.now()
+        self.assertEqual(HistoryMiddleware.parse_epoch(some_dt), some_dt)
+
+    def test_parse_human_epoch(self):
+        self.assertIsInstance(self.middleware.parse_epoch('yesterday'), datetime)
