@@ -167,8 +167,6 @@ class S3CacheStorage(object):
         if not s3_key:
             return
 
-        logger.info('(epoch => {epoch}): retrieving response for {url}.'.format(epoch=epoch,
-                                                                                url=request.url))
         try:
             data_string = s3_key.get_contents_as_string()
         except boto.exception.S3ResponseError as e:
@@ -191,9 +189,8 @@ class S3CacheStorage(object):
             encoding = {'encoding': 'utf8'}
         url = str(metadata['response_url'])
         status = metadata.get('status')
-        logger.debug('response headers {}'.format(response_headers))
         Response = responsetypes.from_args(headers=response_headers, url=url)
-        logger.debug('response type {}'.format(Response))
+
         return Response(url=url,
                         headers=response_headers,
                         status=status,
@@ -204,13 +201,9 @@ class S3CacheStorage(object):
         """Store the given response in the cache.
 
         """
-        logger.info('storing response for {}.'.format(request.url))
+        logger.debug('storing response for {}.'.format(request.url))
         key = self._get_request_storage_key(spider, request)
-        logger.debug('response type {}'.format(type(response)))
         response_body, binary = _reformat_response(response)
-
-        logger.debug('request header {}'.format(request.headers))
-        logger.debug('response header {}'.format(response.headers))
 
         metadata = {
             'url': request.url,

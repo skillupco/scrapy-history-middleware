@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 
 from datetime import datetime
+import logging
 
 from parsedatetime import parsedatetime, Constants
 from scrapy import signals
 from scrapy.exceptions import NotConfigured, IgnoreRequest
 from scrapy.utils.misc import load_object
+
+logger = logging.getLogger(__name__)
 
 MANDATORY_SETTINGS = ['HISTORY_S3_BUCKET',
                       'AWS_ACCESS_KEY_ID',
@@ -14,11 +17,23 @@ EPOCH_DATE_FORMAT = '%Y%m%d'
 
 
 def ignore_on_fail(func):
+    """This middleware serves tooling/debugging purposes. It shouldn't kill a
+    scrapy spider because of its own failures.
+
+    NOTE: built-in `process_exception` could be helpful here, although I find
+    its genericity makes it harder to use at the moment (see
+    https://doc.scrapy.org/en/latest/topics/downloader-middleware.htm for
+    more).
+
+    """
     def _inner(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            raise IgnoreRequest('middleware crashed: {err}'.format(err=e))
+            logger.warning('middleware crashed: {err}'.format(err=e))
+            # tell scrapy to ignore this middleware for this request and go on
+            return None
+
     return _inner
 
 
@@ -50,12 +65,12 @@ class HistoryMiddleware(object):
     @classmethod
     def from_crawler(cls, crawler):
         # instantiate the extension object
-        ext = cls()
+        ext = cls(crawler)
 
         crawler.signals.connect(ext.spider_opened, signal=signals.spider_opened)
         crawler.signals.connect(ext.spider_closed, signal=signals.spider_closed)
 
-        return cls(crawler)
+        return ext
 
     def spider_opened(self, spider):
         self.storage.open_spider(spider)
@@ -83,18 +98,20 @@ class HistoryMiddleware(object):
             elif self.ignore_missing:
                 raise IgnoreRequest("Ignored; request not in history: %s" % request)
 
-    @ignore_on_fail
     def process_response(self, request, response, spider):
         """A response is leaving the Downloader. It was either retreived
         from the web or from another middleware.
 
         Decide if we would like to store it in the history.
         """
-        if self.store_if(spider, request, response):
-            self.storage.store_response(spider, request, response)
-            self.stats.set_value('history/cached', True, spider=spider)
-
-        return response
+        try:
+            if self.store_if(spider, request, response):
+                self.storage.store_response(spider, request, response)
+                self.stats.set_value('history/cached', True, spider=spider)
+        except Exception as e:
+            logger.error('failed to process response: {}'.format(e))
+        finally:
+            return response
 
     @staticmethod
     def parse_epoch(epoch):
