@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import
 from datetime import datetime
 
 from scrapy.utils.httpobj import urlparse_cached
+from six.moves import map
 
 
 class LogicBase(object):
@@ -10,7 +12,7 @@ class LogicBase(object):
     def __init__(self, settings):
         self.ignore_missing = settings.getbool('HTTPCACHE_IGNORE_MISSING', False)
         self.ignore_schemes = settings.getlist('HTTPCACHE_IGNORE_SCHEMES', ['file'])
-        self.ignore_http_codes = map(int, settings.getlist('HTTPCACHE_IGNORE_HTTP_CODES', []))
+        self.ignore_http_codes = list(map(int, settings.getlist('HTTPCACHE_IGNORE_HTTP_CODES', [])))
 
     def spider_opened(self, spider):
         pass

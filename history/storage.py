@@ -2,12 +2,13 @@
 
 from __future__ import unicode_literals
 
+from __future__ import absolute_import
 import base64
 from datetime import datetime
 import json
 import logging
 import os
-import urllib
+import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
 
 import boto
 from scrapy.exceptions import NotConfigured
@@ -240,7 +241,7 @@ class S3CacheStorage(object):
             # if the S3 key is too long, the AWS interface does not allow to download the file !
             source_url = _truncate_url(request.url)
             source_name = "{}/source/{}__{}".format(job_folder, request_fingerprint(request),
-                                                    urllib.quote_plus(source_url))
+                                                    six.moves.urllib.parse.quote_plus(source_url))
             source_key = self.s3_bucket.new_key(source_name)
             source_key.set_contents_from_string(response.body)
             # sometimes can cause memory error in SH if too big
