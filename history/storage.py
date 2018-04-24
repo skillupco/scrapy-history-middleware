@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import unicode_literals
-
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import base64
 from datetime import datetime
 import json
 import logging
 import os
-import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
 
 import boto
+from six.moves.urllib import parse
 from scrapy.exceptions import NotConfigured
 from scrapy.http import TextResponse, Headers
 from scrapy.responsetypes import responsetypes
@@ -241,7 +239,7 @@ class S3CacheStorage(object):
             # if the S3 key is too long, the AWS interface does not allow to download the file !
             source_url = _truncate_url(request.url)
             source_name = "{}/source/{}__{}".format(job_folder, request_fingerprint(request),
-                                                    six.moves.urllib.parse.quote_plus(source_url))
+                                                    parse.quote_plus(source_url))
             source_key = self.s3_bucket.new_key(source_name)
             source_key.set_contents_from_string(response.body)
             # sometimes can cause memory error in SH if too big
