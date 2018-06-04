@@ -28,6 +28,12 @@ DEFAULT_S3_SOURCE_TEMPLATE = '{name}/{time}_{jobid}'
 logger = logging.getLogger('{}:'.format(__name__))
 
 
+def _coerce_unicode_encoding(text):
+    if isinstance(text, bytes):
+        return text.decode('utf-8')
+    return text
+
+
 def _reformat_response(response):
     binary = response_body = None
     if isinstance(response, TextResponse):
@@ -214,13 +220,13 @@ class S3CacheStorage(object):
         data = {
             'binary': binary,
             'metadata': metadata,
-            'request_headers': request.headers,
-            'request_body': request.body,
-            'response_headers': response.headers,
-            'response_body': response_body
+            'request_headers': request.headers.to_unicode_dict(),
+            'request_body': _coerce_unicode_encoding(request.body),
+            'response_headers': response.headers.to_unicode_dict(),
+            'response_body': response.body_as_unicode()
         }
 
-        data_string = json.dumps(data, ensure_ascii=False, encoding='utf-8')
+        data_string = json.dumps(data, ensure_ascii=False)
         # sometimes can cause memory error in SH if too big
         logger.debug('request/response object size: {} kB'.format(len(data_string) / 1024))
         # With versioning enabled creating a new s3_key is not
