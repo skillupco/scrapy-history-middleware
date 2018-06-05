@@ -244,8 +244,7 @@ class S3CacheStorage(object):
             job_folder = self.save_source
             # if the S3 key is too long, the AWS interface does not allow to download the file !
             source_url = _truncate_url(request.url)
-            source_name = "{}/source/{}__{}".format(job_folder, request_fingerprint(request),
-                                                    parse.quote_plus(source_url))
+            source_name = "{}/source/{}".format(job_folder, parse.quote_plus(source_url))
             source_key = self.s3_bucket.new_key(source_name)
             source_key.set_contents_from_string(response.body)
             # sometimes can cause memory error in SH if too big
