@@ -20,18 +20,15 @@ example:
     AWS_SECRET_ACCESS_KEY = 'YOUR_AWS_SECRET_ACCESS_KEY'
     HISTORY_EPOCH = True
     HISTORY_STORE_IF = 'history.logic.StoreAlways'
-    HISTORY_RETRIEVE_IF = 'history.logic.RetrieveAlways'
+    HISTORY_RETRIEVE_IF = 'history.logic.RetrieveNever'
     HISTORY_BACKEND = 'history.storage.S3CacheStorage'
-    HISTORY_SAVE_SOURCE = '{name}/{time}__{jobid}'
+    HISTORY_SAVE_SOURCE = '{name}/{jobid}'
     HISTORY_S3_BUCKET = 'YOUR_S3_CACHE_BUCKET_NAME'
     HISTORY_USE_PROXY = True
     HTTPCACHE_IGNORE_MISSING = False
 ```
 
-will store and retrieve responses exactly as you expect. However, even
-if multiple developers are working on the same spider, the spidered
-website will only ever see one request (so long as they all use the
-same S3 bucket).
+will store responses exactly as you expect.
 
 Scrapy introduced the `DbmCacheStorage` backend in version 0.13. In
 principle this is capable of interfacing with S3, but the history
@@ -110,9 +107,9 @@ You also have to add the settings in the `spider settings` section of the webpag
 
     HISTORY_EPOCH = True
     HISTORY_STORE_IF= 'history.logic.StoreAlways'
-    HISTORY_RETRIEVE_IF = 'history.logic.RetrieveAlways'
+    HISTORY_RETRIEVE_IF = 'history.logic.RetrieveNever'
     HISTORY_BACKEND = 'history.storage.S3CacheStorage'
-    HISTORY_SAVE_SOURCE = '{name}/{time}__{jobid}'
+    HISTORY_SAVE_SOURCE = '{name}/{jobid}'
     HISTORY_S3_ACCESS_KEY = 'YOUR_AWS_ACCESS_KEY_ID'
     HISTORY_S3_SECRET_KEY = 'YOUR_AWS_SECRET_ACCESS_KEY'
     HISTORY_S3_BUCKET = 'YOUR_S3_CACHE_BUCKET_NAME'
