@@ -110,7 +110,7 @@ class HistoryMiddleware(object):
                 self.storage.store_response(spider, request, response)
                 self.stats.set_value('history/cached', True, spider=spider)
         except Exception as e:
-            logger.info('failed to process response: {}'.format(e))
+            logger.info('failed to process {} response: {}'.format(request.url, e))
         finally:
             return response
 
