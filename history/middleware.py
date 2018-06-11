@@ -31,7 +31,7 @@ def ignore_on_fail(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            logger.warning('middleware crashed: {err}'.format(err=e))
+            logger.info('middleware crashed: {err}'.format(err=e))
             # tell scrapy to ignore this middleware for this request and go on
             return None
 
@@ -110,7 +110,7 @@ class HistoryMiddleware(object):
                 self.storage.store_response(spider, request, response)
                 self.stats.set_value('history/cached', True, spider=spider)
         except Exception as e:
-            logger.error('failed to process response: {}'.format(e))
+            logger.info('failed to process response: {}'.format(e))
         finally:
             return response
 
