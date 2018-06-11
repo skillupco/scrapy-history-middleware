@@ -1,7 +1,15 @@
 Scrapy History Middleware
 =========================
 
-[![CircleCI](https://circleci.com/gh/Kpler/scrapy-history-middleware.svg?style=svg)](https://circleci.com/gh/Kpler/scrapy-history-middleware)
+## Version
+
+You can add this middleware in your Scrapy project with:
+
+`git+https://github.com/Skillupco/scrapy-history-middleware.git`
+
+Don't forget to upgrade the version of the package in `history.__init__.py` before deploying to Scrapinghub.
+
+## Description
 
 The history middleware is designed to create a permanent record of the
 raw requests and responses generated as scrapy crawls the web.
