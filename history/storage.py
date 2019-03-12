@@ -55,7 +55,7 @@ def _try_decoding_response_body(response_body, encoding):
 
     try:
         encoding = 'utf-8'
-        return encoding, response_body.decode(encoding, 'ignore')
+        return 'utf-8/ignore', response_body.decode(encoding, 'ignore')
     except Exception:
         pass
 
