@@ -28,6 +28,41 @@ DEFAULT_S3_SOURCE_TEMPLATE = '{name}/{time}_{jobid}'
 logger = logging.getLogger('{}:'.format(__name__))
 
 
+def _try_decoding_response_body(response_body, encoding):
+    # Try to guess encoding
+    try:
+        return response_body.decode(encoding)
+    except Exception:
+        pass
+
+    try:
+        encoding = 'utf-8'
+        return encoding, response_body.decode(encoding)
+    except Exception:
+        pass
+
+    try:
+        encoding = 'latin-1'
+        return encoding, response_body.decode(encoding)
+    except Exception:
+        pass
+
+    try:
+        encoding = 'ISO-8859-1'
+        return encoding, response_body.decode(encoding)
+    except Exception:
+        pass
+
+    try:
+        encoding = 'utf-8'
+        return 'utf-8/ignore', response_body.decode(encoding, 'ignore')
+    except Exception:
+        pass
+
+    # If all failed, raise original exception
+    return encoding, response_body.decode(encoding)
+
+
 def _coerce_unicode_encoding(text):
     if isinstance(text, bytes):
         return text.decode('utf-8')
@@ -40,8 +75,8 @@ def _reformat_response(response):
         # Textual response (HTMl, XML, csv, etc.),
         # decoded to unicode using encoding (from Content-Type)
         binary = False
-        response_body = response.body.decode(response.encoding)
-        logger.debug('encoded to unicode from text response format: {}'.format(response.encoding))
+        encoding, response_body = _try_decoding_response_body(response.body, response.encoding)
+        logger.debug('encoded to unicode from text response format: {}'.format(encoding))
     else:
         # Binary response (excel, pdf, etc.)
         binary = True
