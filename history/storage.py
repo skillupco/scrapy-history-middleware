@@ -31,7 +31,7 @@ logger = logging.getLogger('{}:'.format(__name__))
 def _try_decoding_response_body(response_body, encoding):
     # Try to guess encoding
     try:
-        return response_body.decode(encoding)
+        return encoding, response_body.decode(encoding)
     except Exception:
         pass
 
