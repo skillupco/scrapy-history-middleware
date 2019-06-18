@@ -98,7 +98,7 @@ def _truncate_metadata_fields(metadata, max_length=400):
     return truncated_fields
 
 
-def _truncate_url(url, max_length=200):
+def _truncate_url(url, max_length=900):
     return (url[:max_length] + '...' if len(url) > max_length else url)
 
 
