@@ -258,7 +258,7 @@ class S3CacheStorage(object):
             'request_headers': request.headers.to_unicode_dict(),
             'request_body': _coerce_unicode_encoding(request.body),
             'response_headers': response.headers.to_unicode_dict(),
-            'response_body': response.body_as_unicode()
+            'response_body': response.text
         }
 
         data_string = json.dumps(data, ensure_ascii=False)
